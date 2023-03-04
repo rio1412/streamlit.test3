@@ -67,23 +67,22 @@ def app():
       # Display the original image
       input_image = Image.open(image_file)
       st.image(input_image, caption="Original Image", use_column_width=True)
-
+      
       # Preprocess the input image for the model
       hr_image = preprocess_image(input_image)
-
+      
       # If the user clicks the "Super Resolution" button
       if st.button('Super Resolution'):
           if hr_image is not None:
-              # Generate thehigh resolution image using the ESRGAN model
+              # Generate the high resolution image using the ESRGAN model
               fake_image = model(hr_image)
 
               # Display the super resolution image
               st.image(fake_image[0], caption="Super Resolution Image", use_column_width=True)
-          
+
               # Save the super resolution image
               save_image(fake_image[0], "super_resolution_image")
-
-      # If no image is uploaded
-      else:
-      st.write("Please upload an image to use the app.")        
-
+        
+# If no image is uploaded
+else:
+    st.write("Please upload an image to use the app.")
