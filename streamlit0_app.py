@@ -84,6 +84,6 @@ def app():
               save_image(fake_image[0], "super_resolution_image")
 
               # If no image is uploaded
-else:
-st.write("Please upload an image to use the app.")
+              else:
+                st.write("Please upload an image to use the app.")
 
