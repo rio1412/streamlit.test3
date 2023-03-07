@@ -1,57 +1,75 @@
-# 基本ライブラリ
+import tensorflow as tf
+import tensorflow_hub as hub
 import streamlit as st
 import numpy as np
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.datasets import load_iris
+from PIL import Image
 
-# データセット読み込み
-iris = load_iris()
-df = pd.DataFrame(iris.data, columns=iris.feature_names)
+# Arbitrary Image Stylizationモデルの読み込み
+hub_handle = 'https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2'
+hub_module = hub.load(hub_handle)
 
-# 目標値
-df['target'] = iris.target
+# 画像の前処理関数
+def preprocess_img(img):
+    img = img.resize((256, 256))  # 画像サイズをリサイズ
+    img = np.array(img)
+    img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+    img = img[tf.newaxis, ...]
+    return img
 
-# 目標値を数字から花の名前に変更
-df.loc[df['target'] == 0, 'target'] = 'setosa'
-df.loc[df['target'] == 1, 'target'] = 'versicolor'
-df.loc[df['target'] == 2, 'target'] = 'virginica'
+# 画像の後処理関数
+def deprocess_img(img):
+    img = np.array(img)
+    if len(img.shape) == 4:
+        img = np.squeeze(img, axis=0)
+    img = img.astype('uint8')
+    return Image.fromarray(img)
 
-# 予測モデル構築
-x = iris.data[:, [0, 2]] 
-y = iris.target
+# 画像の読み込み関数
+def load_image(image_file):
+    img = Image.open(image_file).convert('RGB')
+    img = preprocess_img(img)
+    return img
 
-# ロジスティック回帰
-clf = LogisticRegression()
-clf.fit(x, y)
+# スタイル画像とコンテンツ画像の取得と前処理
+def get_style_content_images(style_image_file, content_image_file):
+    style_image = load_image(style_image_file)
+    content_image = load_image(content_image_file)
+    return style_image, content_image
 
-# サイドバー（入力画面）
-st.sidebar.header('Input Features')
+# 画風変換を実行する関数
+@st.cache
+def stylize(style_image, content_image):
+    outputs = hub_module(tf.constant(content_image), tf.constant(style_image))
+    stylized_image = outputs[0]
+    return deprocess_img(stylized_image)
 
-sepalValue = st.sidebar.slider('sepal length (cm)', min_value=0.0, max_value=10.0, step=0.1)
-petalValue = st.sidebar.slider('petal length (cm)', min_value=0.0, max_value=10.0, step=0.1)
+# メイン関数
+def main():
+    # タイトル
+    st.title("Arbitrary Image Stylization")
 
-# メインパネル
-st.title('Iris Classifier')
-st.write('## Input Value')
+    # スタイル画像とコンテンツ画像のアップロード
+    st.header("Upload Style and Content Images")
+    style_image_file = st.file_uploader("Upload Style Image", type=["jpg", "jpeg", "png"])
+    content_image_file = st.file_uploader("Upload Content Image", type=["jpg", "jpeg", "png"])
 
-# インプットデータ（1行のデータフレーム）
-value_df = pd.DataFrame([],columns=['data','sepal length (cm)','petal length (cm)'])
-record = pd.Series(['data',sepalValue, petalValue], index=value_df.columns)
-value_df = value_df.append(record, ignore_index=True)
-value_df.set_index('data',inplace=True)
+    if style_image_file and content_image_file:
+        # スタイル画像とコンテンツ画像の取得と前処理
+        style_image, content_image = get_style_content_images(style_image_file, content_image_file)
 
-# 入力値の値
-st.write(value_df)
+        # スタイル画像とコンテンツ画像の表示
+        st.header("Style Image")
+        st.image(style_image.numpy(), use_column_width=True)
 
-# 予測値のデータフレーム
-pred_probs = clf.predict_proba(value_df)
-pred_df = pd.DataFrame(pred_probs,columns=['setosa','versicolor','virginica'],index=['probability'])
+        st.header("Content Image")
+        st.image(content_image.numpy(), use_column_width=True)
 
-st.write('## Prediction')
-st.write(pred_df)
+        # 画風変換を実行
+        stylized_image = stylize(style_image, content_image)
 
-# 予測結果の出力
-name = pred_df.idxmax(axis=1).tolist()
-st.write('## Result')
-st.write('このアイリスはきっと',str(name[0]),'です!')
+        # 結果の表示
+        st.header("Stylized Image")
+        st.image(stylized_image, use_column_width=True)
+
+if __name__ == '__main__':
+    main()
