@@ -1,7 +1,7 @@
 numpy
 pandas
 scikit-learn
-Pillow (Python Imaging Library)
+Pillow
 opencv-python-headless==4.6.0.66
 streamlit==1.12.2
 TensorFlow==2.11.0
