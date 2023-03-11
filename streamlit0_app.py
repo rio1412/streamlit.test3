@@ -1,30 +1,32 @@
 import streamlit as st
-import tensorflow as tf
-import tensorflow_hub as hub
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
+# タイトルの表示
+st.title('ローン審査用財務会計分析アプリ')
 
-@st.cache(show_spinner=False)
-def load_image(image_file):
-    img = tf.io.decode_image(image_file.read())
-    img = tf.image.convert_image_dtype(img, tf.float32)
-    img = tf.image.resize(img, [256, 256])
-    return img[tf.newaxis, :]
+# ファイルのアップロード
+uploaded_file = st.file_uploader('ファイルをアップロードしてください', type=['csv'])
 
-
-@st.cache(show_spinner=False)
-def apply_style(content_image, style_image):
-    hub_module = hub.load('https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2')
-    stylized_image = hub_module(tf.constant(content_image), tf.constant(style_image))[0]
-    return stylized_image
-
-
-st.title('画風変換アプリ')
-
-content_image_file = st.file_uploader('コンテンツ画像をアップロードしてください')
-style_image_file = st.file_uploader('スタイル画像をアップロードしてください')
-
-if content_image_file and style_image_file:
-    content_image = load_image(content_image_file)
-    style_image = load_image(style_image_file)
-    stylized_image = apply_style(content_image, style_image)
-    st.image(stylized_image, caption='結果')    
+if uploaded_file is not None:
+    # データの読み込み
+    data = pd.read_csv(uploaded_file)
+    
+    # 可視化
+    fig, ax = plt.subplots()
+    ax.plot(data['年度'], data['売上高'], label='売上高')
+    ax.plot(data['年度'], data['経常利益'], label='経常利益')
+    ax.plot(data['年度'], data['自己資本比率'], label='自己資本比率')
+    ax.legend()
+    st.pyplot(fig)
+    
+    # 指標の計算
+    sales_growth_rate = ((data['売上高'].iloc[-1] / data['売上高'].iloc[0]) ** (1/(len(data)-1))) - 1
+    roa = data['経常利益'].sum() / data['総資産'].iloc[-1]
+    equity_ratio = data['自己資本比率'].iloc[-1]
+    
+    # 結果の表示
+    st.write('売上高成長率:', round(sales_growth_rate, 2))
+    st.write('ROA:', round(roa, 2))
+    st.write('自己資本比率:', round(equity_ratio, 2))
