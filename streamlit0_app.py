@@ -17,7 +17,7 @@ if uploaded_file is not None:
     st.write(financial_data)
 
     # 収益のみのデータを抽出する
-    revenue_data = financial_data[["収益"]]
+    revenue_data = financial_data[["純利益"]]
 
     # 過去の収益データを散布図として描画
     def plot_scatter(x, y):
