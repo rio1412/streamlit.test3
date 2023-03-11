@@ -1,9 +1,10 @@
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
 
 # アプリのタイトルを表示
-st.title("Financial Data Visualization App")
+st.title("Financial Predictions App")
 
 # ファイルをアップロードするためのウィジェットを表示する
 uploaded_file = st.file_uploader("Choose a file", type="csv")
@@ -15,44 +16,30 @@ if uploaded_file is not None:
     # データを表示する
     st.write(financial_data)
 
-    # 経常利益、営業利益率、株価のみのデータを抽出する
-    subset_data = financial_data[["経常利益","営業利益率","株価"]]
+    # 収益のみのデータを抽出する
+    revenue_data = financial_data[["収益"]]
 
-    # グラフを描画する関数を定義
-    def plot_graph(x, y):
+    # 過去の収益データを散布図として描画
+    def plot_scatter(x, y):
         fig, ax = plt.subplots()
         ax.scatter(x, y)
         ax.set_xlabel(x.name)
         ax.set_ylabel(y.name)
-        ax.set_title("Scatter plot")
+        ax.set_title("Revenue scatter plot")
         st.pyplot(fig)
 
-    # 経常利益、営業利益率、株価のみのデータを表示
-    st.write(subset_data)
+    plot_scatter(revenue_data.index, revenue_data["収益"])
 
-    # 売上高の成長率を計算して表示
-    net_assets = financial_data["純資産"]
-    net_assets_shift = net_assets.shift(-1)
-    growth_rate = (net_assets - net_assets_shift) / net_assets_shift * 100
-    gr_dropna = growth_rate.dropna()
-    st.write("売上高の成長率: ", gr_dropna)
+    # 線形回帰モデルを作成し、将来の収益を予測する
+    def predict_revenue(x):
+        model = LinearRegression()
+        model.fit(revenue_data.index.values.reshape(-1, 1), revenue_data["収益"])
+        y_pred = model.predict([[x]])
+        return y_pred[0]
 
-    # 加重平均を計算して表示
-    sum_wa = 0
-    count = 0
+    # 予測する年度を入力する
+    prediction_year = st.number_input("Input the year to predict revenue for", value=2022, step=1)
 
-    for year in reversed(gr_dropna):
-        count += 1
-        weight = year * count
-        sum_wa += weight
-
-    result = sum_wa / ((1/2)*count*(count+1))
-    st.write("加重平均: ", result)
-
-    # 経常利益と株価の相関係数を計算して表示
-    correlation = financial_data[["経常利益","株価"]]
-    corr_val = correlation.corr().iloc[0, 1]
-    st.write("経常利益と株価の相関係数: ", corr_val)
-
-    # 経常利益と株価の散布図を描画
-    plot_graph(subset_data["経常利益"], subset_data["株価"])
+    # 将来の収益を予測して表示する
+    predicted_revenue = predict_revenue(prediction_year)
+    st.write("Predicted revenue for", prediction_year, ": ", predicted_revenue)
