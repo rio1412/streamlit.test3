@@ -1,75 +1,57 @@
+import streamlit as st
 import tensorflow as tf
 import tensorflow_hub as hub
-import streamlit as st
 import numpy as np
-from PIL import Image
+import PIL.Image
+import requests
+from io import BytesIO
 
-# Arbitrary Image Stylizationモデルの読み込み
-hub_handle = 'https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2'
-hub_module = hub.load(hub_handle)
-
-# 画像の前処理関数
-def preprocess_img(img):
-    img = img.resize((256, 256))  # 画像サイズをリサイズ
-    img = np.array(img)
-    img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-    img = img[tf.newaxis, ...]
-    return img
-
-# 画像の後処理関数
-def deprocess_img(img):
-    img = np.array(img)
-    if len(img.shape) == 4:
-        img = np.squeeze(img, axis=0)
-    img = img.astype('uint8')
-    return Image.fromarray(img)
-
-# 画像の読み込み関数
-def load_image(image_file):
-    img = Image.open(image_file).convert('RGB')
-    img = preprocess_img(img)
-    return img
+# 画風変換の関数
+@st.cache(show_spinner=False)
+def stylize(style_image, content_image):
+    hub_module = hub.load('https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2')
+    outputs = hub_module(tf.constant(content_image), tf.constant(style_image))
+    stylized_image = outputs[0]
+    return np.array(stylized_image[0])
 
 # スタイル画像とコンテンツ画像の取得と前処理
 def get_style_content_images(style_image_file, content_image_file):
-    style_image = load_image(style_image_file)
-    content_image = load_image(content_image_file)
+    style_image = PIL.Image.open(style_image_file).convert('RGB').resize((256, 256))
+    content_image = PIL.Image.open(content_image_file).convert('RGB').resize((256, 256))
+    style_image = np.array(style_image) / 255.0
+    content_image = np.array(content_image) / 255.0
     return style_image, content_image
 
-# 画風変換を実行する関数
-@st.cache
-def stylize(style_image, content_image):
-    outputs = hub_module(tf.constant(content_image), tf.constant(style_image))
-    stylized_image = outputs[0]
-    return deprocess_img(stylized_image)
+# Streamlit アプリケーション
+def app():
+    # ウィジェット
+    st.title('画風変換アプリ')
+    style_image_file_widget = st.sidebar.file_uploader('スタイル画像をアップロードしてください', type=['jpg', 'jpeg', 'png'])
+    content_image_file_widget = st.sidebar.file_uploader('コンテンツ画像をアップロードしてください', type=['jpg', 'jpeg', 'png'])
+    style_image_widget = st.empty()
+    content_image_widget = st.empty()
 
-# メイン関数
-def main():
-    # タイトル
-    st.title("Arbitrary Image Stylization")
+    # 画風変換を実行して結果を表示する関数
+    def on_change(change):
+        if change['type'] == 'change' and change['name'] == 'value':
+            style_image_file = style_image_file_widget.value
+            content_image_file = content_image_file_widget.value
+            if style_image_file is not None and content_image_file is not None:
+                # スタイル画像とコンテンツ画像の取得と前処理
+                style_image, content_image = get_style_content_images(style_image_file, content_image_file)
 
-    # スタイル画像とコンテンツ画像のアップロード
-    st.header("Upload Style and Content Images")
-    style_image_file = st.file_uploader("Upload Style Image", type=["jpg", "jpeg", "png"])
-    content_image_file = st.file_uploader("Upload Content Image", type=["jpg", "jpeg", "png"])
+                # スタイル画像とコンテンツ画像の表示
+                style_image_widget.image(style_image, caption='スタイル画像', use_column_width=True)
+                content_image_widget.image(content_image, caption='コンテンツ画像', use_column_width=True)
 
-    if style_image_file and content_image_file:
-        # スタイル画像とコンテンツ画像の取得と前処理
-        style_image, content_image = get_style_content_images(style_image_file, content_image_file)
+                # 画風変換を実行
+                stylized_image = stylize(style_image, content_image)
 
-        # スタイル画像とコンテンツ画像の表示
-        st.header("Style Image")
-        st.image(style_image.numpy(), use_column_width=True)
+                # 結果の表示
+                st.image(stylized_image, caption='変換結果', use_column_width=True)
 
-        st.header("Content Image")
-        st.image(content_image.numpy(), use_column_width=True)
-
-        # 画風変換を実行
-        stylized_image = stylize(style_image, content_image)
-
-        # 結果の表示
-        st.header("Stylized Image")
-        st.image(stylized_image, use_column_width=True)
+    style_image_file_widget.observe(on_change)
+    content_image_file_widget.observe(on_change)
 
 if __name__ == '__main__':
-    main()
+    app()
