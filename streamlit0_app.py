@@ -16,30 +16,36 @@ if uploaded_file is not None:
     # データを表示する
     st.write(financial_data)
 
-    # 収益のみのデータを抽出する
-    revenue_data = financial_data[["株価"]]
+    # 列を選択するウィジェットを表示する
+    selected_columns = st.multiselect("Select columns to plot", options=list(financial_data.columns))
+    
+    if len(selected_columns) > 0:
+        # 選択された列のデータを抽出する
+        selected_data = financial_data[selected_columns]
 
-    # 過去の収益データを散布図として描画
-    def plot_scatter(x, y):
-        fig, ax = plt.subplots()
-        ax.scatter(x, y)
-        ax.set_xlabel(x.name)
-        ax.set_ylabel(y.name)
-        ax.set_title("Revenue scatter plot")
-        st.pyplot(fig)
+        # 散布図を描画する
+        def plot_scatter(x, y):
+            fig, ax = plt.subplots()
+            ax.scatter(x, y)
+            ax.set_xlabel(x.name)
+            ax.set_ylabel(y.name)
+            ax.set_title("Scatter plot")
+            st.pyplot(fig)
 
-    plot_scatter(revenue_data.index, revenue_data["株価"])
+        for column in selected_columns:
+            plot_scatter(financial_data.index, financial_data[column])
 
-    # 線形回帰モデルを作成し、将来の収益を予測する
-    def predict_revenue(x):
-        model = LinearRegression()
-        model.fit(revenue_data.index.values.reshape(-1, 1), revenue_data["株価"])
-        y_pred = model.predict([[x]])
-        return y_pred[0]
+        # 線形回帰モデルを作成し、将来の値を予測する
+        def predict_value(x, y, x_pred):
+            model = LinearRegression()
+            model.fit(x.values.reshape(-1, 1), y)
+            y_pred = model.predict([[x_pred]])
+            return y_pred[0]
 
-    # 予測する年度を入力する
-    prediction_year = st.number_input("Input the year to predict revenue for", value=2022, step=1)
+        # 予測する年度を入力する
+        prediction_year = st.number_input("Input the year to predict for", value=2022, step=1)
 
-    # 将来の収益を予測して表示する
-    predicted_revenue = predict_revenue(prediction_year)
-    st.write("Predicted revenue for", prediction_year, ": ", predicted_revenue)
+        for column in selected_columns:
+            # 将来の値を予測して表示する
+            predicted_value = predict_value(financial_data.index, financial_data[column], prediction_year)
+            st.write("Predicted", column, "for", prediction_year, ": ", predicted_value)
