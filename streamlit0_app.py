@@ -28,12 +28,12 @@ if uploaded_file is not None:
         ax.set_title("Revenue scatter plot")
         st.pyplot(fig)
 
-    plot_scatter(revenue_data.index, revenue_data["収益"])
+    plot_scatter(revenue_data.index, revenue_data["純利益"])
 
     # 線形回帰モデルを作成し、将来の収益を予測する
     def predict_revenue(x):
         model = LinearRegression()
-        model.fit(revenue_data.index.values.reshape(-1, 1), revenue_data["収益"])
+        model.fit(revenue_data.index.values.reshape(-1, 1), revenue_data["純利益"])
         y_pred = model.predict([[x]])
         return y_pred[0]
 
