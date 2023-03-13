@@ -1,51 +1,64 @@
-import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
+from pydub import AudioSegment
+from scipy import fftpack
+import numpy as np
+import cv2
+from IPython.display import display, HTML
+import time
 
-# アプリのタイトルを表示
-st.title("Financial Predictions App")
+st.title("音楽に合わせて明滅するアプリ")
 
-# ファイルをアップロードするためのウィジェットを表示する
-uploaded_file = st.file_uploader("Choose a file", type="csv")
+uploaded_file = st.file_uploader("音楽ファイルをアップロードしてください", type=['mp3'])
 
-# ファイルがアップロードされた場合、データを読み込む
 if uploaded_file is not None:
-    # ファイルを読み込む
-    financial_data = pd.read_csv(uploaded_file, encoding="SHIFT-JIS")
-    # データを表示する
-    st.write(financial_data)
+    # 音楽ファイルを読み込む
+    song = AudioSegment.from_file(uploaded_file)
 
-    # 列を選択するウィジェットを表示する
-    selected_columns = st.multiselect("Select columns to plot", options=list(financial_data.columns))
-    
-    if len(selected_columns) > 0:
-        # 選択された列のデータを抽出する
-        selected_data = financial_data[selected_columns]
+    # プログレスバーを表示する
+    progress_bar = st.progress(0)
 
-        # 散布図を描画する
-        def plot_scatter(x, y):
-            fig, ax = plt.subplots()
-            ax.scatter(x, y)
-            ax.set_xlabel(x.name)
-            ax.set_ylabel(y.name)
-            ax.set_title("Scatter plot")
-            st.pyplot(fig)
+    # 明滅のパターンを定義する
+    pattern = [np.sin(np.linspace(0, 2*np.pi, 100)) * 127 + 128,
+               np.sin(np.linspace(0, 2*np.pi, 100)) * -127 + 128,
+               np.zeros(100)]
 
-        for column in selected_columns:
-            plot_scatter(financial_data.index, financial_data[column])
+    # 明滅のインデックスを初期化する
+    pattern_index = 0
 
-        # 線形回帰モデルを作成し、将来の値を予測する
-        def predict_value(x, y, x_pred):
-            model = LinearRegression()
-            model.fit(x.values.reshape(-1, 1), y)
-            y_pred = model.predict([[x_pred]])
-            return y_pred[0]
+    # 音楽を再生する
+    song.export("tmp.wav", format="wav")
+    display(HTML("""
+        <audio controls>
+          <source src="tmp.wav" type="audio/wav">
+        </audio>
+    """))
+    time.sleep(1)  # 音楽ファイルが読み込まれるまで待機する
 
-        # 予測する年度を入力する
-        prediction_year = st.number_input("Input the year to predict for", value=2022, step=1)
+    # 明滅を表示するウィンドウを作成する
+    cv2.namedWindow('Color', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Color', 400, 400)
 
-        for column in selected_columns:
-            # 将来の値を予測して表示する
-            predicted_value = predict_value(financial_data.index, financial_data[column], prediction_year)
-            st.write("Predicted", column, "for", prediction_year, ": ", predicted_value)
+    # フレームをループする
+    samples = np.array(song.get_array_of_samples())
+    for i in range(len(samples)):
+        # 周波数成分の強度から色を決定する
+        color = np.array([np.clip(spectrum[i], 0, 255), 255-np.clip(spectrum[i], 0, 255), 0])
+
+        # 明滅のパターンに従って色を変更する
+        color = np.array([color[j] + pattern[pattern_index][j] for j in range(3)])
+        color = np.clip(color, 0, 255).astype(np.uint8)
+
+        # 明滅のインデックスを更新する
+        pattern_index += 1
+        if pattern_index >= len(pattern):
+            pattern_index = 0
+
+        # ウィンドウに色を描画する
+        cv2.imshow('Color', np.tile(color, (400, 400, 1)))
+        cv2.waitKey(1)
+
+        # プログレスバーを更新する
+        progress_bar.progress(i / len(samples))
+
+    # ウィンドウを閉じる
+    cv2.destroyAllWindows()
