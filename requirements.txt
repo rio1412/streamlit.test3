@@ -1,6 +1,4 @@
-streamlit==1.4.0
+Janome==0.4.1
+wordcloud==1.8.1
 matplotlib==3.4.3
-numpy==1.20.3
-opencv
-pydub==0.25.1
-scipy==1.7.1
+streamlit==1.0.0
