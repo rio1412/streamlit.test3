@@ -13,7 +13,7 @@ def tokenize(text):
 
 # ワードクラウドを作成する関数
 def create_wordcloud(words):
-    mask = np.array(Image.open('./img/mask.png'))
+    mask = np.array(Image.open('.F6DA2CD1-0290-4333-8439-212FA93ED339.png'))
     wordcloud = WordCloud(background_color="white",
                           width=800, height=600,
                           font_path='font/mplus-2p-regular.ttf',
