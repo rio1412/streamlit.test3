@@ -19,7 +19,7 @@ def create_wordcloud(text):
     # ワードクラウドの作成
     wordcloud = WordCloud(
         background_color="white",
-        font_path="./fonts/NotoSansCJKjp-Regular.otf",
+        font_path="0D10DE1D-5D14-4E5C-B492-0164B69F4AB4.png",
         width=800,
         height=800,
         prefer_horizontal=1.0,
