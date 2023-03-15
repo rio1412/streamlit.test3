@@ -19,7 +19,7 @@ def create_wordcloud(words, mask_image=None):
         mask = None
     wordcloud = WordCloud(background_color="white",
                           width=800, height=600,
-                          font_path="./font/mplus-2p-regular.ttf",
+                          font_path="examples/fonts/SourceHanSerif/SourceHanSerifK-Light.otf",
                           contour_width=2, contour_color='steelblue',
                           mask=mask
                           ).generate(' '.join(words))
